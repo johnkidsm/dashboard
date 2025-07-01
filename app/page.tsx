@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,7 +34,6 @@ import {
   Activity,
   CheckCircle,
   MapPin,
-  Layers,
   Phone,
   Truck,
   Radio,
@@ -46,7 +46,10 @@ import {
   Building,
   Leaf,
   BarChart3,
+  Bot,
 } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import * as d3 from "d3"
 
 // Enhanced mock data with coordinates for mapping
 const mockAlerts = [
@@ -61,7 +64,7 @@ const mockAlerts = [
     timeDetected: "2024-01-15 14:23",
     estimatedImpact: "Potential outage affecting 45,000 customers",
     recommendedActions: ["Deploy fire suppression", "Prepare backup power routing", "Alert emergency services"],
-    coordinates: { lat: 49.2827, lng: -123.1207 }, // Vancouver area
+    coordinates: { lat: 55, lng: -125 },
     details: {
       fireSize: "150 hectares",
       windSpeed: "25 km/h",
@@ -103,7 +106,7 @@ const mockAlerts = [
     timeDetected: "2024-01-15 13:45",
     estimatedImpact: "AQI exceeding regulatory limits - potential shutdown required",
     recommendedActions: ["Reduce emissions", "Notify regulators", "Implement contingency plan"],
-    coordinates: { lat: 53.5461, lng: -113.4938 }, // Edmonton area
+    coordinates: { lat: 55, lng: -115 },
     details: {
       currentAQI: 165,
       pollutant: "PM2.5",
@@ -145,7 +148,7 @@ const mockAlerts = [
     timeDetected: "2024-01-15 12:30",
     estimatedImpact: "Contamination detected - environmental compliance issue",
     recommendedActions: ["Stop discharge", "Investigate source", "Report to authorities"],
-    coordinates: { lat: 45.5017, lng: -73.5673 }, // Montreal area
+    coordinates: { lat: 50, lng: -70 },
     details: {
       contaminant: "Heavy metals",
       concentrationLevel: "2.5x normal",
@@ -176,90 +179,6 @@ const mockAlerts = [
       ],
     },
   },
-  {
-    id: 4,
-    type: "extreme_weather",
-    severity: "MEDIUM",
-    location: "Wind Farm W-301, SK",
-    sector: "renewable",
-    distance: "5.2 km",
-    confidence: 85,
-    timeDetected: "2024-01-15 11:15",
-    estimatedImpact: "High winds may require turbine shutdown",
-    recommendedActions: ["Monitor wind speeds", "Prepare for shutdown", "Secure equipment"],
-    coordinates: { lat: 52.1579, lng: -106.6702 }, // Saskatoon area
-    details: {
-      currentWindSpeed: "65 km/h",
-      gustSpeed: "85 km/h",
-      shutdownThreshold: "90 km/h",
-      duration: "4-6 hours",
-      turbinesAffected: 24,
-      powerLoss: "48 MW",
-      revenueImpact: "$12,000/hour",
-      safetyRisk: "Medium",
-    },
-    responseProtocol: {
-      emergencyContacts: [
-        { role: "Wind Farm Manager", name: "Robert Singh", phone: "+1-306-555-0456" },
-        { role: "Maintenance Chief", name: "Anna Kowalski", phone: "+1-306-555-0789" },
-        { role: "Grid Coordinator", name: "Tom Bradley", phone: "+1-306-555-0012" },
-      ],
-      resources: [
-        { type: "Maintenance Crew", units: "Emergency response team", eta: "40 minutes" },
-        { type: "Equipment Securing", units: "Mobile crane, safety equipment", eta: "35 minutes" },
-        { type: "Grid Backup", units: "Alternative power routing", eta: "Immediate" },
-      ],
-      procedures: [
-        "Initiate turbine shutdown sequence",
-        "Secure all loose equipment and materials",
-        "Deploy maintenance crew to safe positions",
-        "Coordinate with grid operator for power rerouting",
-        "Monitor weather conditions continuously",
-      ],
-    },
-  },
-  {
-    id: 5,
-    type: "pipeline_leak",
-    severity: "HIGH",
-    location: "Pipeline P-450, AB",
-    sector: "oil_gas",
-    distance: "0.0 km",
-    confidence: 94,
-    timeDetected: "2024-01-15 10:45",
-    estimatedImpact: "Potential environmental contamination and safety risk",
-    recommendedActions: ["Emergency shutdown", "Deploy response team", "Evacuate area"],
-    coordinates: { lat: 51.0447, lng: -114.0719 }, // Calgary area
-    details: {
-      leakRate: "50 barrels/hour",
-      product: "Crude oil",
-      soilContamination: "2 hectares",
-      evacuationRadius: "1 km",
-      responseTeamETA: "45 minutes",
-      cleanupCost: "$2.1M",
-      regulatoryFines: "$500K",
-      repairTime: "72 hours",
-    },
-    responseProtocol: {
-      emergencyContacts: [
-        { role: "Pipeline Operations", name: "Mark Johnson", phone: "+1-403-555-0567" },
-        { role: "Emergency Response", name: "Jennifer Lee", phone: "+1-403-555-0890" },
-        { role: "Environmental Lead", name: "Carlos Mendez", phone: "+1-403-555-0123" },
-      ],
-      resources: [
-        { type: "Spill Response", units: "Hazmat team, containment equipment", eta: "20 minutes" },
-        { type: "Evacuation", units: "Emergency vehicles, personnel", eta: "15 minutes" },
-        { type: "Repair Crew", units: "Pipeline specialists, equipment", eta: "60 minutes" },
-      ],
-      procedures: [
-        "Execute emergency pipeline shutdown",
-        "Establish 1km evacuation perimeter",
-        "Deploy spill containment measures",
-        "Notify Alberta Energy Regulator immediately",
-        "Coordinate with local emergency services",
-      ],
-    },
-  },
 ]
 
 const mockInfrastructure = [
@@ -270,17 +189,7 @@ const mockInfrastructure = [
     status: "At Risk",
     riskLevel: 85,
     location: "BC",
-    coordinates: { lat: 49.2827, lng: -123.1207 },
-    details: {
-      voltage: "500 kV",
-      length: "125 km",
-      capacity: "1,200 MW",
-      age: "35 years",
-      lastMaintenance: "2024-01-10",
-      criticalityScore: "High",
-      customersServed: 45000,
-      backupAvailable: "Limited",
-    },
+    coordinates: { lat: 55, lng: -125 },
   },
   {
     id: "R-105",
@@ -289,17 +198,7 @@ const mockInfrastructure = [
     status: "Monitoring",
     riskLevel: 65,
     location: "AB",
-    coordinates: { lat: 53.5461, lng: -113.4938 },
-    details: {
-      capacity: "150,000 bpd",
-      products: ["Gasoline", "Diesel", "Jet Fuel"],
-      employees: 850,
-      environmentalRating: "B+",
-      lastInspection: "2024-01-08",
-      complianceStatus: "Good",
-      emissionsLevel: "Within limits",
-      safetyRecord: "98.5%",
-    },
+    coordinates: { lat: 55, lng: -115 },
   },
   {
     id: "H-203",
@@ -308,133 +207,67 @@ const mockInfrastructure = [
     status: "Alert",
     riskLevel: 78,
     location: "QC",
-    coordinates: { lat: 45.5017, lng: -73.5673 },
-    details: {
-      capacity: "2,100 MW",
-      reservoirVolume: "11.5 billion m³",
-      height: "214 m",
-      yearBuilt: "1968",
-      turbines: 16,
-      annualGeneration: "35 TWh",
-      fishLadders: "Yes",
-      floodRisk: "Low",
-    },
-  },
-  {
-    id: "W-301",
-    type: "Wind Farm",
-    sector: "renewable",
-    status: "Monitoring",
-    riskLevel: 45,
-    location: "SK",
-    coordinates: { lat: 52.1579, lng: -106.6702 },
-    details: {
-      turbines: 24,
-      capacity: "48 MW",
-      hubHeight: "80 m",
-      rotorDiameter: "77 m",
-      capacity_factor: "32%",
-      annualGeneration: "134 GWh",
-      wildlifeImpact: "Minimal",
-      noiseLevel: "Compliant",
-    },
-  },
-  {
-    id: "P-450",
-    type: "Pipeline",
-    sector: "oil_gas",
-    status: "Critical",
-    riskLevel: 94,
-    location: "AB",
-    coordinates: { lat: 51.0447, lng: -114.0719 },
-    details: {
-      diameter: "36 inches",
-      length: "450 km",
-      capacity: "400,000 bpd",
-      product: "Crude oil",
-      pressure: "1,440 psi",
-      material: "API 5L X70",
-      lastInspection: "2023-11-15",
-      integrityStatus: "Compromised",
-    },
-  },
-  {
-    id: "S-205",
-    type: "Solar Farm",
-    sector: "renewable",
-    status: "Normal",
-    riskLevel: 12,
-    location: "ON",
-    coordinates: { lat: 43.6532, lng: -79.3832 },
-    details: {
-      capacity: "100 MW",
-      panels: 350000,
-      area: "400 hectares",
-      efficiency: "19.2%",
-      tracking: "Single-axis",
-      inverters: 50,
-      gridConnection: "230 kV",
-      annualGeneration: "150 GWh",
-    },
-  },
-  {
-    id: "G-103",
-    type: "Gas Plant",
-    sector: "oil_gas",
-    status: "Normal",
-    riskLevel: 18,
-    location: "AB",
-    coordinates: { lat: 56.7267, lng: -111.379 },
-    details: {
-      capacity: "800 MW",
-      efficiency: "58%",
-      fuelType: "Natural Gas",
-      emissions: "350 kg CO2/MWh",
-      startupTime: "10 minutes",
-      rampRate: "50 MW/min",
-      heatRate: "6,100 BTU/kWh",
-      waterUsage: "Low",
-    },
-  },
-  {
-    id: "N-401",
-    type: "Nuclear Plant",
-    sector: "electricity",
-    status: "Normal",
-    riskLevel: 8,
-    location: "ON",
-    coordinates: { lat: 44.3106, lng: -81.6017 },
-    details: {
-      reactors: 4,
-      capacity: "3,512 MW",
-      type: "CANDU",
-      fuel: "Natural Uranium",
-      capacity_factor: "85%",
-      safetyRating: "Excellent",
-      wasteStorage: "On-site",
-      lifeExtension: "2033",
-    },
+    coordinates: { lat: 50, lng: -70 },
   },
 ]
 
-// Enhanced Interactive Map Component with highlight functionality
-const InteractiveMap = ({
-  alerts,
-  infrastructure,
-  selectedSector,
-  selectedThreat,
-  onMarkerClick,
-  highlightedAlert,
-}) => {
-  const filteredAlerts = alerts.filter((alert) => {
-    const sectorMatch = selectedSector === "all" || alert.sector === selectedSector
-    const threatMatch = selectedThreat === "all" || alert.type === selectedThreat
-    return sectorMatch && threatMatch
-  })
+const mockRobotics = [
+  {
+    id: "Drone-Alpha-01",
+    type: "Aerial Drone",
+    status: "Active",
+    mission: "Wildfire Perimeter Scan",
+    location: "Near T-401, BC",
+    battery: 78,
+    dataCollected: "Thermal, Multispectral",
+    flightTime: "42 min",
+  },
+  {
+    id: "Quad-Bravo-03",
+    type: "Quadruped Robot",
+    status: "Standby",
+    mission: "Pipeline Integrity Check",
+    location: "Pipeline P-450 Staging Area, AB",
+    battery: 95,
+    dataCollected: "Gas, Lidar",
+    lastActivity: "2 hours ago",
+  },
+  {
+    id: "Drone-Charlie-02",
+    type: "Aerial Drone",
+    status: "Returning",
+    mission: "Air Quality Sampling",
+    location: "En route to Refinery R-105, AB",
+    battery: 23,
+    dataCollected: "Air Particulates",
+    flightTime: "87 min",
+  },
+]
 
-  const filteredInfrastructure = infrastructure.filter(
-    (asset) => selectedSector === "all" || asset.sector === selectedSector,
-  )
+// Enhanced Interactive Map Component with D3 and GeoJSON
+const InteractiveMap = ({ alerts, infrastructure, onMarkerClick, highlightedAlert }) => {
+  const [geoData, setGeoData] = useState(null)
+  const width = 800
+  const height = 600
+
+  useEffect(() => {
+    fetch("/canada.json")
+      .then((response) => response.json())
+      .then((data) => {
+        setGeoData(data)
+      })
+  }, [])
+
+  if (!geoData) {
+    return (
+      <div className="relative w-full h-64 sm:h-80 md:h-96 bg-slate-900/50 rounded-lg border border-slate-700 flex items-center justify-center">
+        <p>Loading Map...</p>
+      </div>
+    )
+  }
+
+  const projection = d3.geoMercator().fitSize([width, height], geoData)
+  const pathGenerator = d3.geoPath().projection(projection)
 
   const getSeverityColor = (severity) => {
     switch (severity) {
@@ -486,133 +319,63 @@ const InteractiveMap = ({
   }
 
   return (
-    <div className="relative w-full h-64 sm:h-80 md:h-96 bg-gradient-to-br from-blue-100 to-green-100 rounded-lg overflow-hidden border">
-      {/* Map Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-green-50">
-        {/* Canada outline representation */}
-        <svg className="w-full h-full opacity-20" viewBox="0 0 800 400">
-          <path
-            d="M100 200 Q200 150 300 180 Q400 160 500 190 Q600 170 700 200 Q650 250 600 280 Q500 300 400 290 Q300 310 200 280 Q150 250 100 200"
-            fill="#10b981"
-            stroke="#059669"
-            strokeWidth="2"
-          />
-        </svg>
-      </div>
-
-      {/* Province Labels */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-8 left-8 sm:top-16 sm:left-16 text-xs font-medium text-gray-600">BC</div>
-        <div className="absolute top-10 left-16 sm:top-20 sm:left-32 text-xs font-medium text-gray-600">AB</div>
-        <div className="absolute top-12 left-24 sm:top-24 sm:left-48 text-xs font-medium text-gray-600">SK</div>
-        <div className="absolute top-10 right-16 sm:top-20 sm:right-32 text-xs font-medium text-gray-600">ON</div>
-        <div className="absolute top-8 right-8 sm:top-16 sm:right-16 text-xs font-medium text-gray-600">QC</div>
-      </div>
-
-      {/* Alert Markers */}
-      {filteredAlerts.map((alert) => {
-        const x = ((alert.coordinates.lng + 140) / 80) * 100 // Normalize longitude to percentage
-        const y = ((60 - alert.coordinates.lat) / 20) * 100 // Normalize latitude to percentage
-        const isHighlighted = highlightedAlert && highlightedAlert.id === alert.id
-
-        return (
-          <div
-            key={`alert-${alert.id}`}
-            className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 ${
-              isHighlighted ? "scale-125 sm:scale-150 z-20" : "hover:scale-110 z-10"
-            }`}
-            style={{ left: `${x}%`, top: `${y}%` }}
-            onClick={() => onMarkerClick("alert", alert)}
-          >
-            <div
-              className={`w-4 h-4 sm:w-6 sm:h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold ${
-                isHighlighted ? "animate-bounce border-4 border-yellow-400" : "animate-pulse"
-              }`}
-              style={{ backgroundColor: getSeverityColor(alert.severity) }}
-              title={`${alert.type.replace("_", " ").toUpperCase()} - ${alert.location}`}
-            >
-              <span className="text-xs sm:text-sm">{getThreatIcon(alert.type)}</span>
-            </div>
-            {isHighlighted && (
-              <div className="absolute top-6 sm:top-8 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-lg font-bold shadow-lg animate-pulse whitespace-nowrap">
-                🎯 INCIDENT LOCATION
-              </div>
-            )}
-            <div className="absolute top-4 sm:top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity">
-              {alert.location}
-            </div>
-          </div>
-        )
-      })}
-
-      {/* Infrastructure Markers */}
-      {filteredInfrastructure.map((asset) => {
-        const x = ((asset.coordinates.lng + 140) / 80) * 100
-        const y = ((60 - asset.coordinates.lat) / 20) * 100
-
-        return (
-          <div
-            key={`infra-${asset.id}`}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"
-            style={{ left: `${x}%`, top: `${y}%` }}
-            onClick={() => onMarkerClick("infrastructure", asset)}
-          >
-            <div
-              className="w-3 h-3 sm:w-5 sm:h-5 rounded border-2 border-white shadow-lg flex items-center justify-center text-xs"
-              style={{ backgroundColor: getRiskColor(asset.riskLevel) }}
-              title={`${asset.id} - ${asset.type}`}
-            >
-              <span className="text-xs">{getSectorIcon(asset.sector)}</span>
-            </div>
-            <div className="absolute top-3 sm:top-5 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity">
-              {asset.id} - {asset.type}
-            </div>
-          </div>
-        )
-      })}
-
-      {/* Map Legend */}
-      <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-white bg-opacity-90 p-2 sm:p-3 rounded-lg shadow-lg">
-        <h4 className="font-medium text-xs sm:text-sm mb-1 sm:mb-2">Map Legend</h4>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500"></div>
-            <span className="text-xs">High Severity</span>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-500"></div>
-            <span className="text-xs">Medium Severity</span>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded bg-red-500"></div>
-            <span className="text-xs">Critical Infrastructure</span>
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded bg-green-500"></div>
-            <span className="text-xs">Normal Operations</span>
-          </div>
-          {highlightedAlert && (
-            <div className="flex items-center gap-1 sm:gap-2 border-t pt-1 sm:pt-2 mt-1 sm:mt-2">
-              <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-yellow-400 animate-pulse"></div>
-              <span className="font-bold text-xs">Active Incident</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Map Controls */}
-      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white bg-opacity-90 p-1 sm:p-2 rounded-lg shadow-lg">
-        <div className="flex flex-col gap-1 sm:gap-2">
-          <Button size="sm" variant="outline" className="text-xs h-6 sm:h-8">
-            <Layers className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-            <span className="hidden sm:inline">Layers</span>
-          </Button>
-          <Button size="sm" variant="outline" className="text-xs h-6 sm:h-8">
-            <MapPin className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
-            <span className="hidden sm:inline">Center</span>
-          </Button>
-        </div>
-      </div>
+    <div className="relative w-full h-64 sm:h-80 md:h-96 bg-background rounded-lg overflow-hidden border">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full">
+        <g>
+          {geoData.features.map((feature, i) => (
+            <path
+              key={i}
+              d={pathGenerator(feature)}
+              className="fill-muted-foreground/10 stroke-border"
+              strokeWidth="0.5"
+            />
+          ))}
+        </g>
+        <g>
+          {infrastructure.map((asset) => {
+            const [x, y] = projection([asset.coordinates.lng, asset.coordinates.lat])
+            return (
+              <foreignObject key={`infra-${asset.id}`} x={x - 10} y={y - 10} width="20" height="20">
+                <div
+                  className="w-5 h-5 rounded border-2 border-white shadow-lg flex items-center justify-center text-xs cursor-pointer hover:scale-110 transition-transform"
+                  style={{ backgroundColor: getRiskColor(asset.riskLevel) }}
+                  title={`${asset.id} - ${asset.type}`}
+                  onClick={() => onMarkerClick("infrastructure", asset)}
+                >
+                  <span className="text-xs">{getSectorIcon(asset.sector)}</span>
+                </div>
+              </foreignObject>
+            )
+          })}
+        </g>
+        <g>
+          {alerts.map((alert) => {
+            const [x, y] = projection([alert.coordinates.lng, alert.coordinates.lat])
+            const isHighlighted = highlightedAlert && highlightedAlert.id === alert.id
+            return (
+              <foreignObject
+                key={`alert-${alert.id}`}
+                x={x - (isHighlighted ? 15 : 12)}
+                y={y - (isHighlighted ? 15 : 12)}
+                width={isHighlighted ? 30 : 24}
+                height={isHighlighted ? 30 : 24}
+                className={`transition-all duration-300 ${isHighlighted ? "z-20" : "z-10"}`}
+              >
+                <div
+                  className={`w-full h-full rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold cursor-pointer ${
+                    isHighlighted ? "animate-bounce border-4 border-yellow-400" : "animate-pulse"
+                  }`}
+                  style={{ backgroundColor: getSeverityColor(alert.severity) }}
+                  title={`${alert.type.replace("_", " ").toUpperCase()} - ${alert.location}`}
+                  onClick={() => onMarkerClick("alert", alert)}
+                >
+                  <span className="text-sm">{getThreatIcon(alert.type)}</span>
+                </div>
+              </foreignObject>
+            )
+          })}
+        </g>
+      </svg>
     </div>
   )
 }
@@ -735,10 +498,10 @@ const ResponseDialog = ({
                         <div className="text-xs text-blue-600">{contact.phone}</div>
                       </div>
                       <div className="flex gap-1 sm:gap-2">
-                        <Button size="sm" variant="outline" className="h-6 w-6 sm:h-8 sm:w-8 p-0">
+                        <Button size="sm" variant="outline" className="h-6 w-6 sm:h-8 sm:w-8 p-0 bg-transparent">
                           <Phone className="h-2 w-2 sm:h-3 sm:w-3" />
                         </Button>
-                        <Button size="sm" variant="outline" className="h-6 w-6 sm:h-8 sm:w-8 p-0">
+                        <Button size="sm" variant="outline" className="h-6 w-6 sm:h-8 sm:w-8 p-0 bg-transparent">
                           <Send className="h-2 w-2 sm:h-3 sm:w-3" />
                         </Button>
                       </div>
@@ -773,7 +536,7 @@ const ResponseDialog = ({
                         <Badge variant="outline" className="text-xs">
                           {isDeactivating ? "Recall" : "Ready"}
                         </Badge>
-                        <Button size="sm" variant="outline" className="h-6 w-6 sm:h-8 sm:w-8 p-0">
+                        <Button size="sm" variant="outline" className="h-6 w-6 sm:h-8 sm:w-8 p-0 bg-transparent">
                           <Radio className="h-2 w-2 sm:h-3 sm:w-3" />
                         </Button>
                       </div>
@@ -874,7 +637,7 @@ const ResponseDialog = ({
                   </div>
                 )}
 
-                <Button variant="outline" onClick={onClose} className="text-xs sm:text-sm">
+                <Button variant="outline" onClick={onClose} className="text-xs sm:text-sm bg-transparent">
                   Close
                 </Button>
               </div>
@@ -1037,13 +800,13 @@ const threatIcons = {
 const getSeverityColor = (severity) => {
   switch (severity) {
     case "HIGH":
-      return "text-red-600 bg-red-50 border-red-200"
+      return "text-red-400 bg-red-900/20 border-red-500/30"
     case "MEDIUM":
-      return "text-yellow-600 bg-yellow-50 border-yellow-200"
+      return "text-yellow-400 bg-yellow-900/20 border-yellow-500/30"
     case "LOW":
-      return "text-green-600 bg-green-50 border-green-200"
+      return "text-green-400 bg-green-900/20 border-green-500/30"
     default:
-      return "text-gray-600 bg-gray-50 border-gray-200"
+      return "text-slate-400 bg-slate-800/20 border-slate-700"
   }
 }
 
@@ -1061,7 +824,12 @@ const MobileNav = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
     <>
       {/* Mobile Menu Button */}
       <div className="md:hidden fixed top-4 left-4 z-50">
-        <Button variant="outline" size="sm" onClick={() => setIsOpen(!isOpen)} className="bg-white shadow-lg">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsOpen(!isOpen)}
+          className="bg-slate-800/80 backdrop-blur-sm border-slate-700 shadow-lg"
+        >
           {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </Button>
       </div>
@@ -1073,12 +841,12 @@ const MobileNav = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
 
       {/* Mobile Navigation Menu */}
       <div
-        className={`md:hidden fixed top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
+        className={`md:hidden fixed top-0 left-0 h-full w-64 bg-slate-900 border-r border-slate-800 shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">Navigation</h2>
+        <div className="p-4 border-b border-slate-800">
+          <h2 className="text-lg font-semibold text-white">Navigation</h2>
         </div>
         <nav className="p-4">
           <div className="space-y-2">
@@ -1092,7 +860,9 @@ const MobileNav = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
                     setIsOpen(false)
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                    activeTab === item.id ? "bg-blue-100 text-blue-700 font-medium" : "text-gray-600 hover:bg-gray-100"
+                    activeTab === item.id
+                      ? "bg-sky-500/20 text-sky-400 font-medium"
+                      : "text-slate-300 hover:bg-slate-800"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -1107,14 +877,12 @@ const MobileNav = ({ activeTab, setActiveTab, isOpen, setIsOpen }) => {
   )
 }
 
-export default function EnergySenseComprehensive() {
-  // Add isDeactivating state
+export default function EnergyEminenceDashboard() {
   const [isDeactivating, setIsDeactivating] = useState(false)
   const [activeTab, setActiveTab] = useState("dashboard")
   const [selectedSector, setSelectedSector] = useState("all")
   const [selectedThreat, setSelectedThreat] = useState("all")
   const [selectedAlert, setSelectedAlert] = useState(null)
-  const [selectedInfrastructure, setSelectedInfrastructure] = useState(null)
   const [selectedMapItem, setSelectedMapItem] = useState(null)
   const [highlightedAlert, setHighlightedAlert] = useState(null)
   const [responseDialogOpen, setResponseDialogOpen] = useState(false)
@@ -1132,58 +900,41 @@ export default function EnergySenseComprehensive() {
     (asset) => selectedSector === "all" || asset.sector === selectedSector,
   )
 
-  const handleMetricClick = (metricKey) => {
-    setActiveTab("analytics")
-  }
-
-  const handleEnvironmentalClick = (envType) => {
-    setActiveTab("environmental")
-  }
-
   const handleViewDetails = (alert) => {
     setHighlightedAlert(alert)
-    // Auto-scroll to map or switch to a view that shows the map
     const mapElement = document.querySelector('[data-map="true"]')
     if (mapElement) {
       mapElement.scrollIntoView({ behavior: "smooth" })
     }
   }
 
-  // Update the handleInitiateResponse function to properly track individual alerts
   const handleInitiateResponse = (alert) => {
     setResponseAlert(alert)
     setResponseDialogOpen(true)
     setIsDeactivating(false)
   }
 
-  // Add a new function to handle deactivating responses
   const handleDeactivateResponse = (alert) => {
     setResponseAlert(alert)
     setResponseDialogOpen(true)
     setIsDeactivating(true)
   }
 
-  // Update the handleResponseInitiated function to properly track by ID
   const handleResponseInitiated = (alert) => {
     setActiveResponses((prev) => [...prev.filter((a) => a.id !== alert.id), alert])
     setResponseDialogOpen(false)
     setResponseAlert(null)
-
-    // Show success notification
-    alert(
+    window.alert(
       `🚨 EMERGENCY RESPONSE ACTIVATED for ${alert.type.replace("_", " ").toUpperCase()} at ${alert.location}\n\n✅ All emergency contacts notified\n✅ Response teams deployed\n✅ Protocols activated`,
     )
   }
 
-  // Add a new function to handle response deactivation
   const handleResponseDeactivated = (alert) => {
     setActiveResponses((prev) => prev.filter((a) => a.id !== alert.id))
     setResponseDialogOpen(false)
     setResponseAlert(null)
     setIsDeactivating(false)
-
-    // Show success notification
-    alert(
+    window.alert(
       `✅ EMERGENCY RESPONSE DEACTIVATED for ${alert.type.replace("_", " ").toUpperCase()} at ${alert.location}\n\n✅ All teams recalled\n✅ Incident closed\n✅ Normal operations resumed`,
     )
   }
@@ -1193,8 +944,7 @@ export default function EnergySenseComprehensive() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      {/* Mobile Navigation */}
+    <div className="min-h-screen bg-background text-foreground">
       <MobileNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -1204,44 +954,49 @@ export default function EnergySenseComprehensive() {
 
       <div className="p-2 sm:p-4 md:p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-4 sm:mb-6 md:mb-8 mt-12 md:mt-0">
+          <header className="mb-4 sm:mb-6 md:mb-8 mt-12 md:mt-0">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-1 sm:mb-2">
-                  EnergyEminence Platform
-                </h1>
-                <p className="text-sm sm:text-lg md:text-xl text-gray-600">
-                  AI-Powered Environmental & Energy Infrastructure Monitoring
-                </p>
-              </div>
-              <div className="text-left sm:text-right">
-                <div className="text-xs sm:text-sm text-gray-500">Live Monitoring</div>
-                <div className="text-sm sm:text-lg font-semibold text-green-600 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  All Systems Active
+              <div className="flex items-center gap-3">
+                <Image src="/logo.jpeg" alt="KraftGene AI Logo" width={50} height={50} className="rounded-md" />
+                <div>
+                  <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary-foreground mb-1 sm:mb-2">
+                    EnergyEminence
+                  </h1>
+                  <p className="text-sm sm:text-lg md:text-xl text-muted-foreground">
+                    Predictive Environmental & Infrastructure Intelligence
+                  </p>
                 </div>
-                {activeResponses.length > 0 && (
-                  <div className="text-xs sm:text-sm text-red-600 font-medium mt-1">
-                    🚨 {activeResponses.length} Active Emergency Response{activeResponses.length > 1 ? "s" : ""}
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-left sm:text-right">
+                  <div className="text-xs sm:text-sm text-muted-foreground">Live Monitoring</div>
+                  <div className="text-sm sm:text-lg font-semibold text-green-400 flex items-center justify-start sm:justify-end gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    All Systems Active
                   </div>
-                )}
+                  {activeResponses.length > 0 && (
+                    <div className="text-xs sm:text-sm text-red-400 font-medium mt-1">
+                      🚨 {activeResponses.length} Active Emergency Response{activeResponses.length > 1 ? "s" : ""}
+                    </div>
+                  )}
+                </div>
+                <ThemeToggle />
               </div>
             </div>
-          </div>
+          </header>
 
           {/* Enhanced Key Metrics with Click Functionality */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Threats Detected</CardTitle>
-                    <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Threats Detected</CardTitle>
+                    <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-orange-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">{mockMetrics.threatsDetected}</div>
-                    <p className="text-xs text-muted-foreground">Last 30 days</p>
+                    <div className="text-lg sm:text-2xl font-bold text-white">{mockMetrics.threatsDetected}</div>
+                    <p className="text-xs text-slate-400">Last 30 days</p>
                   </CardContent>
                 </Card>
               </DialogTrigger>
@@ -1270,13 +1025,13 @@ export default function EnergySenseComprehensive() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-sm">Detection Accuracy</span>
-                          <span className="font-medium text-green-600 text-sm">
+                          <span className="font-medium text-green-400 text-sm">
                             {detailedMetrics.threatsDetected.accuracy}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm">Trend</span>
-                          <span className="font-medium text-green-600 text-sm">
+                          <span className="font-medium text-green-400 text-sm">
                             {detailedMetrics.threatsDetected.trend}
                           </span>
                         </div>
@@ -1289,14 +1044,16 @@ export default function EnergySenseComprehensive() {
 
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Infrastructure</CardTitle>
-                    <Factory className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Infrastructure</CardTitle>
+                    <Factory className="h-3 w-3 sm:h-4 sm:w-4 text-sky-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">{mockMetrics.infrastructureMonitored}</div>
-                    <p className="text-xs text-muted-foreground">Assets monitored</p>
+                    <div className="text-lg sm:text-2xl font-bold text-white">
+                      {mockMetrics.infrastructureMonitored}
+                    </div>
+                    <p className="text-xs text-slate-400">Assets monitored</p>
                   </CardContent>
                 </Card>
               </DialogTrigger>
@@ -1323,7 +1080,7 @@ export default function EnergySenseComprehensive() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-sm">System Uptime</span>
-                          <span className="font-medium text-green-600 text-sm">
+                          <span className="font-medium text-green-400 text-sm">
                             {detailedMetrics.infrastructureMonitored.coverage}
                           </span>
                         </div>
@@ -1342,14 +1099,14 @@ export default function EnergySenseComprehensive() {
 
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Response Time</CardTitle>
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Response Time</CardTitle>
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-green-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">{mockMetrics.avgResponseTime}</div>
-                    <p className="text-xs text-muted-foreground">Avg detection to alert</p>
+                    <div className="text-lg sm:text-2xl font-bold text-white">{mockMetrics.avgResponseTime}</div>
+                    <p className="text-xs text-slate-400">Avg detection to alert</p>
                   </CardContent>
                 </Card>
               </DialogTrigger>
@@ -1380,7 +1137,7 @@ export default function EnergySenseComprehensive() {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm">Improvement</span>
-                          <span className="font-medium text-green-600 text-sm">
+                          <span className="font-medium text-green-400 text-sm">
                             {detailedMetrics.avgResponseTime.improvement}
                           </span>
                         </div>
@@ -1393,14 +1150,14 @@ export default function EnergySenseComprehensive() {
 
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Cost Savings</CardTitle>
-                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Cost Savings</CardTitle>
+                    <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">{mockMetrics.costSavings}</div>
-                    <p className="text-xs text-muted-foreground">Prevented losses</p>
+                    <div className="text-lg sm:text-2xl font-bold text-white">{mockMetrics.costSavings}</div>
+                    <p className="text-xs text-slate-400">Prevented losses</p>
                   </CardContent>
                 </Card>
               </DialogTrigger>
@@ -1417,7 +1174,7 @@ export default function EnergySenseComprehensive() {
                         {Object.entries(detailedMetrics.costSavings.breakdown).map(([category, amount]) => (
                           <div key={category} className="flex justify-between">
                             <span className="capitalize text-sm">{category.replace("_", " ")}</span>
-                            <span className="font-medium text-green-600 text-sm">{amount}</span>
+                            <span className="font-medium text-green-400 text-sm">{amount}</span>
                           </div>
                         ))}
                       </div>
@@ -1427,7 +1184,7 @@ export default function EnergySenseComprehensive() {
                       <div className="space-y-2">
                         <div className="flex justify-between">
                           <span className="text-sm">ROI</span>
-                          <span className="font-medium text-green-600 text-sm">{detailedMetrics.costSavings.roi}</span>
+                          <span className="font-medium text-green-400 text-sm">{detailedMetrics.costSavings.roi}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm">Payback Period</span>
@@ -1441,39 +1198,39 @@ export default function EnergySenseComprehensive() {
             </Dialog>
 
             <Card
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors"
               onClick={() => setActiveTab("environmental")}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Compliance</CardTitle>
-                <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Compliance</CardTitle>
+                <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-400" />
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-lg sm:text-2xl font-bold">{mockMetrics.environmentalCompliance}</div>
-                <p className="text-xs text-muted-foreground">Environmental compliance</p>
+                <div className="text-lg sm:text-2xl font-bold text-white">{mockMetrics.environmentalCompliance}</div>
+                <p className="text-xs text-slate-400">Environmental compliance</p>
               </CardContent>
             </Card>
 
             <Card
-              className="cursor-pointer hover:shadow-lg transition-shadow"
+              className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors"
               onClick={() => setActiveTab("infrastructure")}
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium">Sectors</CardTitle>
-                <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-teal-600" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Sectors</CardTitle>
+                <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-teal-400" />
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="text-lg sm:text-2xl font-bold">{mockMetrics.sectorsMonitored}</div>
-                <p className="text-xs text-muted-foreground">Energy sectors</p>
+                <div className="text-lg sm:text-2xl font-bold text-white">{mockMetrics.sectorsMonitored}</div>
+                <p className="text-xs text-slate-400">Energy sectors</p>
               </CardContent>
             </Card>
           </div>
 
           {/* Interactive Map Section */}
-          <Card className="mb-4 sm:mb-6 md:mb-8" data-map="true">
-            <CardHeader>
-              <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+          <Card className="mb-4 sm:mb-6 md:mb-8 bg-transparent border-0" data-map="true">
+            <CardHeader className="px-0">
+              <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-white">
+                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-sky-400" />
                 Real-Time Threat & Infrastructure Map
                 {highlightedAlert && (
                   <Badge variant="destructive" className="ml-2 animate-pulse text-xs">
@@ -1481,30 +1238,33 @@ export default function EnergySenseComprehensive() {
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
+              <CardDescription className="text-xs sm:text-sm text-slate-400">
                 Interactive map showing live alerts and infrastructure status across Canada
                 {highlightedAlert && " - Click on the highlighted marker for incident details"}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <InteractiveMap
                 alerts={mockAlerts}
                 infrastructure={mockInfrastructure}
-                selectedSector={selectedSector}
-                selectedThreat={selectedThreat}
                 onMarkerClick={handleMapMarkerClick}
                 highlightedAlert={highlightedAlert}
               />
               {highlightedAlert && (
-                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-500/40 rounded-lg">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <span className="font-medium text-yellow-800 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-yellow-400" />
+                      <span className="font-medium text-yellow-300 text-sm">
                         Incident Location Highlighted: {highlightedAlert.location}
                       </span>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => setHighlightedAlert(null)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setHighlightedAlert(null)}
+                      className="bg-slate-700/50 hover:bg-slate-700"
+                    >
                       Clear Highlight
                     </Button>
                   </div>
@@ -1624,7 +1384,7 @@ export default function EnergySenseComprehensive() {
                           </div>
                           <h4 className="font-medium mb-2 mt-4 text-sm">Technical Specifications</h4>
                           <div className="space-y-2 text-xs sm:text-sm">
-                            {Object.entries(selectedMapItem.item.details).map(([key, value]) => (
+                            {Object.entries(selectedMapItem.item.details ?? {}).map(([key, value]) => (
                               <div key={key} className="flex justify-between">
                                 <span className="capitalize">{key.replace("_", " ")}:</span>
                                 <span className="font-medium">{value}</span>
@@ -1685,14 +1445,16 @@ export default function EnergySenseComprehensive() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-6 md:mb-8">
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Air Quality</CardTitle>
-                    <Wind className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Air Quality</CardTitle>
+                    <Wind className="h-3 w-3 sm:h-4 sm:w-4 text-sky-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">{mockEnvironmentalData.air_quality.current_aqi}</div>
-                    <p className="text-xs text-muted-foreground">AQI - {mockEnvironmentalData.air_quality.status}</p>
+                    <div className="text-lg sm:text-2xl font-bold text-white">
+                      {mockEnvironmentalData.air_quality.current_aqi}
+                    </div>
+                    <p className="text-xs text-slate-400">AQI - {mockEnvironmentalData.air_quality.status}</p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {mockEnvironmentalData.air_quality.locations_monitored} sites
@@ -1781,16 +1543,16 @@ export default function EnergySenseComprehensive() {
 
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Water Quality</CardTitle>
-                    <Droplets className="h-3 w-3 sm:h-4 sm:w-4 text-cyan-500" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Water Quality</CardTitle>
+                    <Droplets className="h-3 w-3 sm:h-4 sm:w-4 text-cyan-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">
+                    <div className="text-lg sm:text-2xl font-bold text-white">
                       {mockEnvironmentalData.water_quality.compliance_rate}%
                     </div>
-                    <p className="text-xs text-muted-foreground">Compliance Rate</p>
+                    <p className="text-xs text-slate-400">Compliance Rate</p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {mockEnvironmentalData.water_quality.sites_monitored} sites
@@ -1877,16 +1639,16 @@ export default function EnergySenseComprehensive() {
 
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Weather Monitoring</CardTitle>
-                    <Thermometer className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Weather Monitoring</CardTitle>
+                    <Thermometer className="h-3 w-3 sm:h-4 sm:w-4 text-orange-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">
+                    <div className="text-lg sm:text-2xl font-bold text-white">
                       {mockEnvironmentalData.weather.forecast_accuracy}%
                     </div>
-                    <p className="text-xs text-muted-foreground">Forecast Accuracy</p>
+                    <p className="text-xs text-slate-400">Forecast Accuracy</p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {mockEnvironmentalData.weather.coverage_area}
@@ -1963,14 +1725,16 @@ export default function EnergySenseComprehensive() {
 
             <Dialog>
               <DialogTrigger asChild>
-                <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <Card className="cursor-pointer bg-slate-800/50 hover:bg-slate-800 border-slate-700 transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Wildfire Detection</CardTitle>
-                    <Flame className="h-3 w-3 sm:h-4 sm:w-4 text-red-500" />
+                    <CardTitle className="text-xs sm:text-sm font-medium text-slate-300">Wildfire Detection</CardTitle>
+                    <Flame className="h-3 w-3 sm:h-4 sm:w-4 text-red-400" />
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="text-lg sm:text-2xl font-bold">{mockEnvironmentalData.wildfire.detection_time}</div>
-                    <p className="text-xs text-muted-foreground">Avg Detection Time</p>
+                    <div className="text-lg sm:text-2xl font-bold text-white">
+                      {mockEnvironmentalData.wildfire.detection_time}
+                    </div>
+                    <p className="text-xs text-slate-400">Avg Detection Time</p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs">
                         {mockEnvironmentalData.wildfire.area_monitored}
@@ -2052,7 +1816,7 @@ export default function EnergySenseComprehensive() {
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4 sm:mb-6">
             <Select value={selectedSector} onValueChange={setSelectedSector}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 bg-slate-800/50 border-slate-700">
                 <SelectValue placeholder="Filter by Sector" />
               </SelectTrigger>
               <SelectContent>
@@ -2064,7 +1828,7 @@ export default function EnergySenseComprehensive() {
             </Select>
 
             <Select value={selectedThreat} onValueChange={setSelectedThreat}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-48 bg-slate-800/50 border-slate-700">
                 <SelectValue placeholder="Filter by Threat Type" />
               </SelectTrigger>
               <SelectContent>
@@ -2081,48 +1845,41 @@ export default function EnergySenseComprehensive() {
           {/* Main Content with Improved Navigation */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
             {/* Desktop Navigation */}
-            <TabsList className="hidden md:grid w-full grid-cols-5 h-12">
+            <TabsList className="hidden md:grid w-full grid-cols-6 h-12 bg-muted/50 border">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                <span className="hidden lg:inline">Live Dashboard</span>
-                <span className="lg:hidden">Dashboard</span>
+                <Home className="h-4 w-4" /> Dashboard
               </TabsTrigger>
               <TabsTrigger value="alerts" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                <span className="hidden lg:inline">Active Alerts</span>
-                <span className="lg:hidden">Alerts</span>
+                <Bell className="h-4 w-4" /> Alerts
               </TabsTrigger>
               <TabsTrigger value="infrastructure" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                <span className="hidden lg:inline">Infrastructure</span>
-                <span className="lg:hidden">Assets</span>
+                <Building className="h-4 w-4" /> Infrastructure
+              </TabsTrigger>
+              <TabsTrigger value="autonomous" className="flex items-center gap-2">
+                <Bot className="h-4 w-4" /> Autonomous Systems
               </TabsTrigger>
               <TabsTrigger value="environmental" className="flex items-center gap-2">
-                <Leaf className="h-4 w-4" />
-                <span className="hidden lg:inline">Environmental</span>
-                <span className="lg:hidden">Environment</span>
+                <Leaf className="h-4 w-4" /> Environmental
               </TabsTrigger>
               <TabsTrigger value="analytics" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                <span className="hidden lg:inline">Analytics</span>
-                <span className="lg:hidden">Analytics</span>
+                <BarChart3 className="h-4 w-4" /> Analytics
               </TabsTrigger>
             </TabsList>
 
             {/* Mobile Tab Indicator */}
-            <div className="md:hidden bg-white rounded-lg p-3 shadow-sm border">
+            <div className="md:hidden bg-slate-800/50 rounded-lg p-3 shadow-sm border border-slate-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  {activeTab === "dashboard" && <Home className="h-4 w-4 text-blue-600" />}
-                  {activeTab === "alerts" && <Bell className="h-4 w-4 text-red-600" />}
-                  {activeTab === "infrastructure" && <Building className="h-4 w-4 text-gray-600" />}
-                  {activeTab === "environmental" && <Leaf className="h-4 w-4 text-green-600" />}
-                  {activeTab === "analytics" && <BarChart3 className="h-4 w-4 text-purple-600" />}
-                  <span className="font-medium capitalize">
+                  {activeTab === "dashboard" && <Home className="h-4 w-4 text-sky-400" />}
+                  {activeTab === "alerts" && <Bell className="h-4 w-4 text-red-400" />}
+                  {activeTab === "infrastructure" && <Building className="h-4 w-4 text-slate-400" />}
+                  {activeTab === "environmental" && <Leaf className="h-4 w-4 text-green-400" />}
+                  {activeTab === "analytics" && <BarChart3 className="h-4 w-4 text-purple-400" />}
+                  <span className="font-medium capitalize text-white">
                     {activeTab === "dashboard" ? "Live Dashboard" : activeTab}
                   </span>
                 </div>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs border-slate-600 text-slate-300">
                   {activeTab === "dashboard" && "Real-time"}
                   {activeTab === "alerts" && `${filteredAlerts.length} Active`}
                   {activeTab === "infrastructure" && `${filteredInfrastructure.length} Assets`}
@@ -2134,10 +1891,10 @@ export default function EnergySenseComprehensive() {
 
             <TabsContent value="dashboard" className="space-y-4 sm:space-y-6">
               {/* Critical Alerts with Enhanced Functionality */}
-              <Card>
+              <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                    <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                    <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
                     Critical Alerts Requiring Immediate Action
                   </CardTitle>
                 </CardHeader>
@@ -2161,10 +1918,10 @@ export default function EnergySenseComprehensive() {
                                 </Badge>
                               )}
                             </div>
-                            <AlertTitle className="text-sm sm:text-base">
+                            <AlertTitle className="text-sm sm:text-base text-white">
                               {alert.type.replace("_", " ").toUpperCase()} THREAT - {alert.severity}
                             </AlertTitle>
-                            <AlertDescription>
+                            <AlertDescription className="text-slate-300">
                               <div className="mt-2 space-y-1">
                                 <p className="text-xs sm:text-sm">
                                   <strong>Location:</strong> {alert.location}
@@ -2184,7 +1941,7 @@ export default function EnergySenseComprehensive() {
                               </div>
                               <div className="flex flex-col sm:flex-row gap-2 mt-3">
                                 <Button
-                                  className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm"
+                                  className="bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm"
                                   onClick={() => handleViewDetails(alert)}
                                   size="sm"
                                 >
@@ -2194,7 +1951,7 @@ export default function EnergySenseComprehensive() {
 
                                 {isActiveResponse ? (
                                   <Button
-                                    className="bg-amber-600 hover:bg-amber-700 text-xs sm:text-sm"
+                                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm"
                                     onClick={() => handleDeactivateResponse(alert)}
                                     size="sm"
                                   >
@@ -2203,7 +1960,7 @@ export default function EnergySenseComprehensive() {
                                   </Button>
                                 ) : (
                                   <Button
-                                    className="bg-red-600 hover:bg-red-700 text-xs sm:text-sm"
+                                    className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm"
                                     onClick={() => handleInitiateResponse(alert)}
                                     size="sm"
                                   >
@@ -2222,10 +1979,10 @@ export default function EnergySenseComprehensive() {
 
               {/* Infrastructure Status by Sector with Enhanced Functionality */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-sky-400" />
                       Electricity Sector
                     </CardTitle>
                   </CardHeader>
@@ -2236,10 +1993,10 @@ export default function EnergySenseComprehensive() {
                         .map((asset) => (
                           <Dialog key={asset.id}>
                             <DialogTrigger asChild>
-                              <div className="flex items-center justify-between p-3 border rounded cursor-pointer hover:bg-gray-50">
+                              <div className="flex items-center justify-between p-3 border border-slate-700 rounded cursor-pointer hover:bg-slate-800">
                                 <div>
-                                  <div className="font-medium text-sm">{asset.id}</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="font-medium text-sm text-white">{asset.id}</div>
+                                  <div className="text-xs text-slate-400">
                                     {asset.type} - {asset.location}
                                   </div>
                                 </div>
@@ -2275,7 +2032,7 @@ export default function EnergySenseComprehensive() {
                                     <div>
                                       <h4 className="font-medium mb-2 text-sm">Technical Specifications</h4>
                                       <div className="space-y-2 text-xs sm:text-sm">
-                                        {Object.entries(asset.details).map(([key, value]) => (
+                                        {Object.entries(asset.details ?? {}).map(([key, value]) => (
                                           <div key={key} className="flex justify-between">
                                             <span className="capitalize">{key.replace("_", " ")}:</span>
                                             <span className="font-medium">{value}</span>
@@ -2318,10 +2075,10 @@ export default function EnergySenseComprehensive() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Fuel className="h-4 w-4 sm:h-5 sm:w-5 text-gray-600" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Fuel className="h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
                       Oil & Gas Sector
                     </CardTitle>
                   </CardHeader>
@@ -2332,10 +2089,10 @@ export default function EnergySenseComprehensive() {
                         .map((asset) => (
                           <Dialog key={asset.id}>
                             <DialogTrigger asChild>
-                              <div className="flex items-center justify-between p-3 border rounded cursor-pointer hover:bg-gray-50">
+                              <div className="flex items-center justify-between p-3 border border-slate-700 rounded cursor-pointer hover:bg-slate-800">
                                 <div>
-                                  <div className="font-medium text-sm">{asset.id}</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="font-medium text-sm text-white">{asset.id}</div>
+                                  <div className="text-xs text-slate-400">
                                     {asset.type} - {asset.location}
                                   </div>
                                 </div>
@@ -2371,7 +2128,7 @@ export default function EnergySenseComprehensive() {
                                     <div>
                                       <h4 className="font-medium mb-2 text-sm">Technical Specifications</h4>
                                       <div className="space-y-2 text-xs sm:text-sm">
-                                        {Object.entries(asset.details).map(([key, value]) => (
+                                        {Object.entries(asset.details ?? {}).map(([key, value]) => (
                                           <div key={key} className="flex justify-between">
                                             <span className="capitalize">{key.replace("_", " ")}:</span>
                                             <span className="font-medium">{value}</span>
@@ -2414,10 +2171,10 @@ export default function EnergySenseComprehensive() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
                       Renewable Energy
                     </CardTitle>
                   </CardHeader>
@@ -2428,10 +2185,10 @@ export default function EnergySenseComprehensive() {
                         .map((asset) => (
                           <Dialog key={asset.id}>
                             <DialogTrigger asChild>
-                              <div className="flex items-center justify-between p-3 border rounded cursor-pointer hover:bg-gray-50">
+                              <div className="flex items-center justify-between p-3 border border-slate-700 rounded cursor-pointer hover:bg-slate-800">
                                 <div>
-                                  <div className="font-medium text-sm">{asset.id}</div>
-                                  <div className="text-xs text-gray-500">
+                                  <div className="font-medium text-sm text-white">{asset.id}</div>
+                                  <div className="text-xs text-slate-400">
                                     {asset.type} - {asset.location}
                                   </div>
                                 </div>
@@ -2467,7 +2224,7 @@ export default function EnergySenseComprehensive() {
                                     <div>
                                       <h4 className="font-medium mb-2 text-sm">Technical Specifications</h4>
                                       <div className="space-y-2 text-xs sm:text-sm">
-                                        {Object.entries(asset.details).map(([key, value]) => (
+                                        {Object.entries(asset.details ?? {}).map(([key, value]) => (
                                           <div key={key} className="flex justify-between">
                                             <span className="capitalize">{key.replace("_", " ")}:</span>
                                             <span className="font-medium">{value}</span>
@@ -2512,242 +2269,60 @@ export default function EnergySenseComprehensive() {
               </div>
             </TabsContent>
 
-            <TabsContent value="alerts" className="space-y-4 sm:space-y-6">
-              <Card>
+            <TabsContent value="autonomous" className="space-y-4 sm:space-y-6">
+              <Card className="bg-card/50 border">
                 <CardHeader>
-                  <CardTitle className="text-sm sm:text-base">All Active Alerts</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Complete list of environmental threats and infrastructure alerts across all sectors
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                    <Bot className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+                    Autonomous Data Collection Systems
+                  </CardTitle>
+                  <CardDescription>
+                    Real-time status of our drone and robotics fleet for field data acquisition.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3 sm:space-y-4">
-                    {filteredAlerts.map((alert) => {
-                      const ThreatIcon = threatIcons[alert.type]
-                      const SectorIcon = sectorIcons[alert.sector]
-                      const isActiveResponse = activeResponses.some((response) => response.id === alert.id)
-
-                      return (
-                        <div
-                          key={alert.id}
-                          className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => setSelectedAlert(selectedAlert?.id === alert.id ? null : alert)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`w-3 h-3 rounded-full ${
-                                  alert.severity === "HIGH"
-                                    ? "bg-red-500"
-                                    : alert.severity === "MEDIUM"
-                                      ? "bg-yellow-500"
-                                      : "bg-green-500"
-                                }`}
-                              />
-                              <ThreatIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <SectorIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <div>
-                                <div className="font-medium text-sm">
-                                  {alert.type.replace("_", " ").toUpperCase()} - {alert.location}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {alert.sector.replace("_", " ")} • Detected: {alert.timeDetected}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-2">
-                              <Badge
-                                variant={alert.severity === "HIGH" ? "destructive" : "default"}
-                                className="text-xs"
-                              >
-                                {alert.severity}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {alert.confidence}% confidence
-                              </Badge>
-                              {isActiveResponse && (
-                                <Badge variant="destructive" className="animate-pulse text-xs">
-                                  🚨 ACTIVE
-                                </Badge>
-                              )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {mockRobotics.map((robot) => (
+                      <Card key={robot.id} className="bg-muted/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center justify-between text-base">
+                            {robot.id}
+                            <Badge
+                              variant={robot.status === "Active" ? "success" : "secondary"}
+                              className={
+                                robot.status === "Active"
+                                  ? "bg-green-500/20 text-green-300"
+                                  : "bg-slate-500/20 text-slate-300"
+                              }
+                            >
+                              {robot.status}
+                            </Badge>
+                          </CardTitle>
+                          <CardDescription>{robot.type}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Mission:</span>
+                            <span>{robot.mission}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Location:</span>
+                            <span>{robot.location}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Battery:</span>
+                            <div className="flex items-center gap-2 w-1/2">
+                              <Progress value={robot.battery} className="h-2" />
+                              <span>{robot.battery}%</span>
                             </div>
                           </div>
-                          {selectedAlert?.id === alert.id && (
-                            <div className="mt-4 p-3 sm:p-4 bg-gray-50 rounded">
-                              <div className="grid grid-cols-1 gap-4">
-                                <div>
-                                  <h4 className="font-medium mb-2 text-sm">Impact Assessment:</h4>
-                                  <p className="text-xs sm:text-sm text-gray-700">{alert.estimatedImpact}</p>
-                                </div>
-                                <div>
-                                  <h4 className="font-medium mb-2 text-sm">Recommended Actions:</h4>
-                                  <ul className="list-disc list-inside space-y-1">
-                                    {alert.recommendedActions.map((action, idx) => (
-                                      <li key={idx} className="text-xs sm:text-sm text-gray-700">
-                                        {action}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-                              <div className="flex flex-col sm:flex-row gap-2 mt-4">
-                                <Button size="sm" onClick={() => handleViewDetails(alert)} className="text-xs">
-                                  <MapPin className="h-3 w-3 mr-2" />
-                                  Show on Map
-                                </Button>
-
-                                {isActiveResponse ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleDeactivateResponse(alert)}
-                                    className="text-xs bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                                  >
-                                    <AlertTriangle className="h-3 w-3 mr-2" />
-                                    Deactivate Response
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleInitiateResponse(alert)}
-                                    className="text-xs"
-                                  >
-                                    <AlertTriangle className="h-3 w-3 mr-2" />
-                                    Execute Response
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="infrastructure" className="space-y-4 sm:space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm sm:text-base">Infrastructure Monitoring Overview</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Comprehensive view of all monitored energy infrastructure across sectors
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    {filteredInfrastructure.map((asset) => {
-                      const SectorIcon = sectorIcons[asset.sector]
-                      return (
-                        <Dialog key={asset.id}>
-                          <DialogTrigger asChild>
-                            <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                              <CardHeader className="pb-2 sm:pb-3">
-                                <CardTitle className="text-sm sm:text-lg flex items-center gap-2">
-                                  <SectorIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                                  {asset.id}
-                                </CardTitle>
-                                <CardDescription className="text-xs sm:text-sm">
-                                  {asset.type} • {asset.location}
-                                </CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                <div className="space-y-2 sm:space-y-3">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs sm:text-sm">Risk Level</span>
-                                    <span className="font-medium text-xs sm:text-sm">{asset.riskLevel}%</span>
-                                  </div>
-                                  <Progress value={asset.riskLevel} />
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs sm:text-sm">Status</span>
-                                    <Badge
-                                      variant={
-                                        asset.riskLevel > 70
-                                          ? "destructive"
-                                          : asset.riskLevel > 40
-                                            ? "default"
-                                            : "secondary"
-                                      }
-                                      className="text-xs"
-                                    >
-                                      {asset.status}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-xs sm:text-sm">Sector</span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {asset.sector.replace("_", " ")}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-3xl mx-4">
-                            <DialogHeader>
-                              <DialogTitle className="text-sm sm:text-base">
-                                {asset.id} - Infrastructure Details
-                              </DialogTitle>
-                              <DialogDescription className="text-xs sm:text-sm">
-                                Complete technical specifications and operational status
-                              </DialogDescription>
-                            </DialogHeader>
-                            <ScrollArea className="h-64 sm:h-96">
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="font-medium mb-2 text-sm">Technical Specifications</h4>
-                                    <div className="space-y-2 text-xs sm:text-sm">
-                                      {Object.entries(asset.details).map(([key, value]) => (
-                                        <div key={key} className="flex justify-between">
-                                          <span className="capitalize">{key.replace("_", " ")}:</span>
-                                          <span className="font-medium">{value}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-medium mb-2 text-sm">Risk & Status Analysis</h4>
-                                    <div className="space-y-3">
-                                      <div>
-                                        <div className="flex justify-between mb-1">
-                                          <span className="text-xs sm:text-sm">Current Risk Level</span>
-                                          <span className="text-xs sm:text-sm font-medium">{asset.riskLevel}%</span>
-                                        </div>
-                                        <Progress value={asset.riskLevel} />
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-xs sm:text-sm">Operational Status:</span>
-                                        <Badge
-                                          variant={
-                                            asset.riskLevel > 70
-                                              ? "destructive"
-                                              : asset.riskLevel > 40
-                                                ? "default"
-                                                : "secondary"
-                                          }
-                                          className="text-xs"
-                                        >
-                                          {asset.status}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-xs sm:text-sm">Energy Sector:</span>
-                                        <Badge variant="outline" className="text-xs">
-                                          {asset.sector.replace("_", " ")}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </ScrollArea>
-                          </DialogContent>
-                        </Dialog>
-                      )
-                    })}
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Data:</span>
+                            <span>{robot.dataCollected}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -2755,29 +2330,29 @@ export default function EnergySenseComprehensive() {
 
             <TabsContent value="environmental" className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Wind className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Wind className="h-4 w-4 sm:h-5 sm:w-5 text-sky-400" />
                       Air Quality Monitoring
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm">Current AQI</span>
-                        <span className="text-xl sm:text-2xl font-bold">
+                        <span className="text-sm text-slate-300">Current AQI</span>
+                        <span className="text-xl sm:text-2xl font-bold text-white">
                           {mockEnvironmentalData.air_quality.current_aqi}
                         </span>
                       </div>
                       <Progress value={mockEnvironmentalData.air_quality.current_aqi} className="h-2" />
-                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
                         <div>
                           Status: <Badge className="text-xs">{mockEnvironmentalData.air_quality.status}</Badge>
                         </div>
                         <div>
                           Trend:{" "}
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-slate-600 text-slate-300">
                             {mockEnvironmentalData.air_quality.trend}
                           </Badge>
                         </div>
@@ -2788,28 +2363,28 @@ export default function EnergySenseComprehensive() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-500" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Droplets className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
                       Water Quality Monitoring
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm">Compliance Rate</span>
-                        <span className="text-xl sm:text-2xl font-bold">
+                        <span className="text-sm text-slate-300">Compliance Rate</span>
+                        <span className="text-xl sm:text-2xl font-bold text-white">
                           {mockEnvironmentalData.water_quality.compliance_rate}%
                         </span>
                       </div>
                       <Progress value={mockEnvironmentalData.water_quality.compliance_rate} className="h-2" />
-                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
                         <div>Sites Monitored: {mockEnvironmentalData.water_quality.sites_monitored}</div>
                         <div>Contamination Events: {mockEnvironmentalData.water_quality.contamination_events}</div>
                         <div>
                           Trend:{" "}
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-slate-600 text-slate-300">
                             {mockEnvironmentalData.water_quality.trend}
                           </Badge>
                         </div>
@@ -2824,23 +2399,23 @@ export default function EnergySenseComprehensive() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Thermometer className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Thermometer className="h-4 w-4 sm:h-5 sm:w-5 text-orange-400" />
                       Weather & Climate
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm">Forecast Accuracy</span>
-                        <span className="text-xl sm:text-2xl font-bold">
+                        <span className="text-sm text-slate-300">Forecast Accuracy</span>
+                        <span className="text-xl sm:text-2xl font-bold text-white">
                           {mockEnvironmentalData.weather.forecast_accuracy}%
                         </span>
                       </div>
                       <Progress value={mockEnvironmentalData.weather.forecast_accuracy} className="h-2" />
-                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
                         <div>Coverage: {mockEnvironmentalData.weather.coverage_area}</div>
                         <div>Extreme Events: {mockEnvironmentalData.weather.extreme_events}</div>
                         <div>Early Warnings: {mockEnvironmentalData.weather.early_warnings}</div>
@@ -2855,22 +2430,22 @@ export default function EnergySenseComprehensive() {
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                      <Flame className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
+                    <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                      <Flame className="h-4 w-4 sm:h-5 sm:w-5 text-red-400" />
                       Wildfire Detection
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm">Active Fires</span>
-                        <span className="text-xl sm:text-2xl font-bold">
+                        <span className="text-sm text-slate-300">Active Fires</span>
+                        <span className="text-xl sm:text-2xl font-bold text-white">
                           {mockEnvironmentalData.wildfire.active_fires}
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-slate-400">
                         <div>
                           Risk Level:{" "}
                           <Badge variant="destructive" className="text-xs">
@@ -2894,97 +2469,101 @@ export default function EnergySenseComprehensive() {
 
             <TabsContent value="analytics" className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="text-sm sm:text-base">Detection Performance</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
+                    <CardTitle className="text-sm sm:text-base text-white">Detection Performance</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-slate-400">
                       AI model accuracy across threat types
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Wildfire Detection</span>
-                        <span className="font-medium text-xs sm:text-sm">94.2%</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Wildfire Detection</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">94.2%</span>
                       </div>
                       <Progress value={94.2} />
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Air Quality Prediction</span>
-                        <span className="font-medium text-xs sm:text-sm">91.8%</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Air Quality Prediction</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">91.8%</span>
                       </div>
                       <Progress value={91.8} />
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Weather Forecasting</span>
-                        <span className="font-medium text-xs sm:text-sm">89.5%</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Weather Forecasting</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">89.5%</span>
                       </div>
                       <Progress value={89.5} />
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Water Quality Analysis</span>
-                        <span className="font-medium text-xs sm:text-sm">96.1%</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Water Quality Analysis</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">96.1%</span>
                       </div>
                       <Progress value={96.1} />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="text-sm sm:text-base">Sector Impact Analysis</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">Cost savings by energy sector</CardDescription>
+                    <CardTitle className="text-sm sm:text-base text-white">Sector Impact Analysis</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-slate-400">
+                      Cost savings by energy sector
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Electricity</span>
-                        <span className="font-medium text-green-600 text-xs sm:text-sm">$2.1M</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Electricity</span>
+                        <span className="font-medium text-green-400 text-xs sm:text-sm">$2.1M</span>
                       </div>
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Oil & Gas</span>
-                        <span className="font-medium text-green-600 text-xs sm:text-sm">$1.8M</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Oil & Gas</span>
+                        <span className="font-medium text-green-400 text-xs sm:text-sm">$1.8M</span>
                       </div>
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Renewable</span>
-                        <span className="font-medium text-green-600 text-xs sm:text-sm">$0.8M</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Renewable</span>
+                        <span className="font-medium text-green-400 text-xs sm:text-sm">$0.8M</span>
                       </div>
 
-                      <div className="flex justify-between font-bold border-t pt-2">
-                        <span className="text-xs sm:text-sm">Total Savings</span>
-                        <span className="text-green-600 text-xs sm:text-sm">$4.7M</span>
+                      <div className="flex justify-between font-bold border-t border-slate-700 pt-2">
+                        <span className="text-xs sm:text-sm text-white">Total Savings</span>
+                        <span className="text-green-400 text-xs sm:text-sm">$4.7M</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="text-sm sm:text-base">Response Metrics</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">System performance indicators</CardDescription>
+                    <CardTitle className="text-sm sm:text-base text-white">Response Metrics</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-slate-400">
+                      System performance indicators
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3 sm:space-y-4">
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Avg Response Time</span>
-                        <span className="font-medium text-xs sm:text-sm">9 minutes</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Avg Response Time</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">9 minutes</span>
                       </div>
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">False Positive Rate</span>
-                        <span className="font-medium text-xs sm:text-sm">2.8%</span>
+                        <span className="text-xs sm:text-sm text-slate-300">False Positive Rate</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">2.8%</span>
                       </div>
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">System Uptime</span>
-                        <span className="font-medium text-xs sm:text-sm">99.7%</span>
+                        <span className="text-xs sm:text-sm text-slate-300">System Uptime</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">99.7%</span>
                       </div>
 
                       <div className="flex justify-between">
-                        <span className="text-xs sm:text-sm">Customer Satisfaction</span>
-                        <span className="font-medium text-xs sm:text-sm">4.8/5</span>
+                        <span className="text-xs sm:text-sm text-slate-300">Customer Satisfaction</span>
+                        <span className="font-medium text-xs sm:text-sm text-white">4.8/5</span>
                       </div>
                     </div>
                   </CardContent>
@@ -2994,18 +2573,18 @@ export default function EnergySenseComprehensive() {
           </Tabs>
 
           {/* Demo Notice */}
-          <Card className="mt-6 sm:mt-8 border-blue-200 bg-blue-50">
+          <Card className="mt-6 sm:mt-8 border-sky-500/30 bg-sky-900/20">
             <CardContent className="pt-4 sm:pt-6">
               <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <p className="text-blue-800 text-xs sm:text-sm">
+                <div className="w-2 h-2 bg-sky-400 rounded-full animate-pulse" />
+                <p className="text-sky-300 text-xs sm:text-sm">
                   <strong>Interactive Platform Demo:</strong> This demonstration showcases a fully responsive AI-powered
-                  energy infrastructure + environmental monitoring platform. Navigate using the mobile menu (hamburger icon) on mobile devices
-                  or the desktop tabs. Click "View Details & Location" on critical alerts to highlight their location on
-                  the interactive map. Use "Initiate Response" to activate professional emergency response protocols
-                  with real emergency contacts, resource deployment, and comprehensive procedures. The platform tracks
-                  active responses and provides complete incident management capabilities for energy infrastructure
-                  protection across Canada.
+                  energy infrastructure + environmental monitoring platform. Navigate using the mobile menu (hamburger
+                  icon) on mobile devices or the desktop tabs. Click "View Details & Location" on critical alerts to
+                  highlight their location on the interactive map. Use "Initiate Response" to activate professional
+                  emergency response protocols with real emergency contacts, resource deployment, and comprehensive
+                  procedures. The platform tracks active responses and provides complete incident management
+                  capabilities for energy infrastructure protection across Canada.
                 </p>
               </div>
             </CardContent>
